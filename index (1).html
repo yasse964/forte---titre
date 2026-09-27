@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Générateur de titres en blocs : tape ton texte, récupère un PNG transparent.">
+<title>Forge à titres</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Rubik:wght@400;500;600&display=swap">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  [hidden]{display:none!important}
+  :root{
+    color-scheme: dark;
+    --ground:#141317;
+    --panel:#1e1c22;
+    --panel-2:#26242b;
+    --line:#35323b;
+    --text:#ecebef;
+    --muted:#9d99a6;
+    --accent:#6cc04a;
+    --accent-ink:#0f1a0a;
+    --focus:#a8e28f;
+    --display:"Pixelify Sans", "Courier New", monospace;
+    --body:"Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body{background:var(--ground);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.5}
+  .wrap{max-width:1060px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:grid;gap:20px}
+  header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px}
+  h1{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.02em;margin:0;text-wrap:balance}
+  header p{margin:0;color:var(--muted);max-width:60ch}
+
+  .stage{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+  .stage-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .stage-bar .dims{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+  .view{min-height:220px;display:grid;place-items:center;padding:28px 16px;overflow:auto}
+  .view.bg-check{background-color:#2a2830;background-image:linear-gradient(45deg,#34313b 25%,transparent 25%,transparent 75%,#34313b 75%),linear-gradient(45deg,#34313b 25%,transparent 25%,transparent 75%,#34313b 75%);background-size:20px 20px;background-position:0 0,10px 10px}
+  .view.bg-white{background:#ffffff}
+  .view.bg-grass{background:linear-gradient(#7fb4f0,#bcd9f7)}
+  .view img{display:block;max-width:100%;height:auto;image-rendering:auto}
+
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .seg button{background:transparent;color:var(--muted);border:0;padding:5px 11px;font:inherit;font-size:13px;cursor:pointer}
+  .seg button + button{border-left:1px solid var(--line)}
+  .seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--text)}
+
+  .controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+  @media (max-width:760px){.controls{grid-template-columns:minmax(0,1fr)}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:16px;align-content:start}
+  .label{font-family:var(--display);font-weight:500;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .field{display:grid;gap:7px}
+
+  textarea{width:100%;box-sizing:border-box;background:var(--ground);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--display);font-size:22px;letter-spacing:.06em;text-transform:uppercase;resize:vertical;min-height:62px;line-height:1.3}
+  .hint{font-size:13px;color:var(--muted);margin:0}
+
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+  .sw{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;color:var(--text);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+  .sw i{width:18px;height:18px;border-radius:3px;flex:none;box-shadow:inset 0 0 0 2px rgba(255,255,255,.25),0 0 0 1px #000}
+  .sw[aria-pressed="true"]{border-color:var(--accent);background:#23301f}
+  .custom{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+  input[type=color]{width:40px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);padding:2px;cursor:pointer}
+
+  .slider{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center}
+  .slider label{font-size:14px}
+  .slider output{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;text-align:right;min-width:4.5em}
+  .slider input{grid-column:1 / -1;width:100%;accent-color:var(--accent)}
+
+  .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .btn{font:inherit;font-weight:600;border-radius:8px;padding:10px 16px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--text)}
+  .btn.primary{background:var(--accent);border-color:#4f9a33;color:var(--accent-ink);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+  .btn:hover{filter:brightness(1.08)}
+  .status{font-size:13px;color:var(--muted)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Forge à titres</h1>
+    <p>Tape ton texte, le logo en blocs se met à jour tout seul. Le PNG a un fond transparent.</p>
+  </header>
+
+  <section class="stage" aria-label="Aperçu">
+    <div class="stage-bar">
+      <div class="seg" role="group" aria-label="Fond de l'aperçu">
+        <button type="button" data-bg="check" aria-pressed="true">Transparent</button>
+        <button type="button" data-bg="white" aria-pressed="false">Blanc</button>
+        <button type="button" data-bg="grass" aria-pressed="false">Ciel</button>
+      </div>
+      <span class="dims" id="dims">–</span>
+    </div>
+    <div class="view bg-check" id="view"><img id="out" alt="Aperçu du logo"></div>
+  </section>
+
+  <div class="actions">
+    <button class="btn primary" id="dl" type="button">Télécharger le PNG</button>
+    <button class="btn" id="copy" type="button">Copier l'image</button>
+    <span class="status" id="status" aria-live="polite">Astuce : tu peux aussi faire clic droit sur l'aperçu, puis « Enregistrer l'image ».</span>
+  </div>
+
+  <div class="controls">
+    <div class="card">
+      <div class="field">
+        <label class="label" for="txt">Texte</label>
+        <textarea id="txt" rows="2" spellcheck="false">ENCLUME</textarea>
+        <p class="hint">Jusqu'à 3 lignes. Lettres A–Z, chiffres, espaces et ! ? . - : ' + / ( ). Les accents sont retirés.</p>
+      </div>
+      <div class="field">
+        <span class="label">Matière</span>
+        <div class="swatches" id="swatches"></div>
+        <div class="custom"><input type="color" id="custom" value="#595959" aria-label="Couleur personnalisée"><span>Couleur perso</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="label">Réglages</span>
+      <div class="slider"><label for="width">Largeur de l'image</label><output id="widthV"></output><input type="range" id="width" min="200" max="2400" step="10" value="740"></div>
+      <div class="slider"><label for="depth">Profondeur 3D</label><output id="depthV"></output><input type="range" id="depth" min="0" max="3" step="0.1" value="1.6"></div>
+      <div class="slider"><label for="tilt">Inclinaison</label><output id="tiltV"></output><input type="range" id="tilt" min="-0.4" max="0.4" step="0.01" value="0.17"></div>
+      <div class="slider"><label for="outline">Contour noir</label><output id="outlineV"></output><input type="range" id="outline" min="0" max="1.2" step="0.05" value="0.55"></div>
+      <div class="slider"><label for="spacing">Espace entre lettres</label><output id="spacingV"></output><input type="range" id="spacing" min="0" max="2" step="0.05" value="0.8"></div>
+      <button class="btn" id="reset" type="button">Revenir aux réglages d'origine</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Police en blocs : grille de 5 lignes ---------- */
+const G = {
+A:["###","#.#","###","#.#","#.#"],
+B:{rows:["###.","#.##","###.","#.##","###."],cols:[1.85,0.95,1.2,0.65]},
+C:{rows:["###","#..","###"],rowH:[1.9,1.0,2.1]},
+D:{rows:["###.","#.##","#.##","###."],cols:[1.85,0.95,1.2,0.65],rowH:[1.2,1.3,1.3,1.2]},
+E:["#####","#....","####.","#....","#####"],
+F:["#####","#....","####.","#....","#...."],
+G:{rows:["###","#..","#.#","###"],rowH:[1.5,0.8,1.3,1.4]},
+H:["#.#","#.#","###","#.#","#.#"],
+I:{rows:["#","#","#","#","#"],cols:[1.7]},
+J:["..#","..#","..#","#.#","###"],
+K:{rows:["#.##","#.#.","###.","#.#.","#.##"],cols:[1.85,0.95,1.2,0.65]},
+L:["#..","#..","#..","#..","###"],
+M:{rows:["#...#","##.##","#####","#.#.#","#...#"],cols:[1.55,0.5,0.9,0.5,1.55],lit:[3]},
+N:{rows:["#..#","##.#","####","#.##","#..#"],cols:[1.8,0.6,0.6,1.85],rowH:[0.95,1,0.5,1.05,1.5]},
+O:["###","#.#","#.#","#.#","###"],
+P:["###","#.#","###","#..","#.."],
+Q:{rows:["###.","#.#.","#.#.","####"],cols:[1.85,0.95,1.2,0.65],rowH:[1.2,1.4,1.3,1.1]},
+R:{rows:["###.","#.##","###.","#.##","#.##"],cols:[1.85,0.95,1.2,0.65]},
+S:["###","#..","###","..#","###"],
+T:{rows:["###",".#.",".#.",".#.",".#."],cols:[1.55,1.55,1.55]},
+U:["#.#","#.#","#.#","#.#","###"],
+V:{rows:["##.##","##.##","##.##",".###."],cols:[0.6,1.25,0.95,1.25,0.6],rowH:[1.2,1.0,1.4,1.4]},
+W:{rows:["#...#","#.#.#","#####","##.##","#...#"],cols:[1.55,0.5,0.9,0.5,1.55]},
+X:{rows:["##.##","##.##",".###.","##.##","##.##"],cols:[1.2,0.55,0.8,0.55,1.2],rowH:[1.2,0.9,0.8,0.9,1.2]},
+Y:{rows:["##.##","##.##","#####",".###."],cols:[1.0,0.7,0.95,0.7,1.0],rowH:[1.2,1.0,1.0,1.8]},
+Z:{rows:["####","..##",".##.","##..","####"],cols:[1.15,1.15,1.15,1.15]},
+"0":["###","#.#","#.#","#.#","###"],
+"1":{rows:["##",".#",".#",".#",".#"],cols:[0.9,1.7]},
+"2":["###","..#","###","#..","###"],
+"3":["###","..#",".##","..#","###"],
+"4":["#.#","#.#","###","..#","..#"],
+"5":["###","#..","###","..#","###"],
+"6":["###","#..","###","#.#","###"],
+"7":["###","..#","..#","..#","..#"],
+"8":["###","#.#","###","#.#","###"],
+"9":["###","#.#","###","..#","###"],
+"!":["#","#","#",".","#"],
+"?":["#####","....#","..###",".....","..#.."],
+".":[".",".",".",".","#"],
+"-":{rows:["...","...","###","...","..."],cols:[0.8,0.8,0.8]},
+"+":{rows:["...",".#.","###",".#.","..."],cols:[0.8,0.8,0.8]},
+":":[".","#",".","#","."],
+"'":["#","#",".",".","."],
+"/":["....#","...#.","..#..",".#...","#...."],
+"(":[".#","#.","#.","#.",".#"],
+")":["#.",".#",".#",".#","#."],
+" ":["..","..","..","..",".."]
+};
+const ROWS = 5;
+/* Lignes et colonnes de tailles différentes : traits épais, creux fins */
+const ROW_H = [1.25,0.75,1,0.75,1.25];
+const ROW_Y = [0,1.25,2,3,3.75,5];
+const COL_W = {1:[1.15],2:[1,1],3:[1.85,0.95,1.85],4:[1.2,0.85,0.85,1.2],5:[1.2,0.85,0.9,0.85,1.2]};
+function colX(w){const a=[0];for(const v of (COL_W[w]||Array(w).fill(1)))a.push(a[a.length-1]+v);return a;}
+
+/* ---------- Matières ---------- */
+const PRESETS = [
+  {name:"Pierre", c:"#595959"},
+  {name:"Or", c:"#d9a526"},
+  {name:"Diamant", c:"#3fc8c0"},
+  {name:"Émeraude", c:"#2fae55"},
+  {name:"Redstone", c:"#c3272b"},
+  {name:"Bois", c:"#9c6b3b"},
+  {name:"Améthyste", c:"#8a5cc9"},
+  {name:"Neige", c:"#d6dce3"}
+];
+const DEFAULTS = {width:740, depth:1.6, tilt:0.17, outline:0.55, spacing:0.8, color:"#595959"};
+
+function hexToRgb(h){h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.substr(i,2),16));}
+function rgb(a){return `rgb(${a.map(v=>Math.max(0,Math.min(255,Math.round(v)))).join(',')})`;}
+function mul(a,f){return a.map(v=>v*f);}
+function tint(a,f){return a.map(v=>v+(255-v)*f);}
+function palette(hex){
+  const b = hexToRgb(hex);
+  return {
+    faceTop: rgb(mul(b,.65)),       // haut de la face (plus sombre)
+    faceBottom: rgb(b),             // bas de la face
+    rim: rgb(tint(b,.35)),          // liseré clair
+    slab: rgb(mul(b,.53)),          // dessous 3D
+    slabRim: rgb(mul(b,1.03)),
+    outline: rgb([31,29,33].map((v,i)=>v*.85+b[i]*.08)),
+    edge: "#000"
+  };
+}
+
+/* ---------- Outils canvas ---------- */
+function mk(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function copyOf(c){const d=mk(c.width,c.height);d.getContext('2d').drawImage(c,0,0);return d;}
+const N4=[[1,0],[-1,0],[0,1],[0,-1]], N8=[...N4,[1,1],[1,-1],[-1,1],[-1,-1]];
+function dilate(src,r){
+  const out=copyOf(src), ctx=out.getContext('2d');
+  for(let i=0;i<r;i++){const t=copyOf(out);for(const [dx,dy] of (i%2?N8:N4))ctx.drawImage(t,dx,dy);}
+  return out;
+}
+function erode(src,r){
+  const out=copyOf(src), ctx=out.getContext('2d');
+  ctx.globalCompositeOperation='destination-in';
+  for(let i=0;i<r;i++){const t=copyOf(out);for(const [dx,dy] of (i%2?N8:N4))ctx.drawImage(t,dx,dy);}
+  return out;
+}
+function tinted(mask,color){
+  const c=copyOf(mask), x=c.getContext('2d');
+  x.globalCompositeOperation='source-in';x.fillStyle=color;x.fillRect(0,0,c.width,c.height);
+  return c;
+}
+function band(mask,inset,w){ // anneau intérieur à "inset" px du bord, épaisseur w
+  const a = inset>0?erode(mask,inset):copyOf(mask);
+  const b = erode(mask,inset+w);
+  const x=a.getContext('2d');x.globalCompositeOperation='destination-out';x.drawImage(b,0,0);
+  return a;
+}
+
+/* ---------- Mise en page du texte ---------- */
+function clean(t){
+  return t.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase()
+          .replace(/Œ/g,'OE').replace(/Æ/g,'AE');
+}
+function layoutLine(str,spacing){
+  const glyphs=[];let u=0;
+  for(const ch of str){
+    const def=G[ch]; if(!def) continue;
+    const g=def.rows||def, w=g[0].length;
+    let cx=colX(w);
+    if(def.cols){cx=[0];for(const v of def.cols)cx.push(cx[cx.length-1]+v);}
+    let ry=ROW_Y;
+    if(def.rowH){ry=[0];for(const v of def.rowH)ry.push(ry[ry.length-1]+v);}
+    glyphs.push({g,u,w,cx,ry,lit:def.lit||[],space:ch===' '});
+    u+=cx[w]+spacing;
+  }
+  const width=glyphs.length?u-spacing:0;
+  return {glyphs,width};
+}
+
+function render(opts){
+  const pal=palette(opts.color);
+  const lines=clean(opts.text).split(/\r?\n/).slice(0,3).map(l=>l.trimEnd());
+  const laid=lines.map(l=>layoutLine(l,opts.spacing)).filter(l=>l.glyphs.some(g=>!g.space));
+  if(!laid.length) return null;
+
+  const k=opts.tilt, d=opts.depth, sr=0.6, ol=opts.outline;
+  const lineH = ROWS + d + ol*2 + 0.6;
+  // 1) géométrie en unités de cases
+  const Q={front:[],lit:[],all:[]}, lineY=[];
+  const P=(u,v,oy)=>[u+k*(ROWS-v), oy+v];
+  laid.forEach((line,li)=>{
+    const oy=li*lineH, ox=-line.width/2;
+    lineY.push(oy);
+    for(const gl of line.glyphs){
+      const g=gl.g, w=gl.w, NR=g.length, U=c=>ox+gl.u+gl.cx[c];
+      for(let r=0;r<NR;r++)for(let c=0;c<w;c++){
+        if(g[r][c]!=='#') continue;
+        const e=0.02, t=gl.ry[r]-e, bt=gl.ry[r+1]+e, u0=U(c)-e, u1=U(c+1)+e;
+        Q.front.push([P(u0,t,oy),P(u1,t,oy),P(u1,bt,oy),P(u0,bt,oy)]);
+      }
+      // dessous 3D : segments exposés vers le bas
+      for(let r=0;r<NR;r++){
+        const exposed=cc=>g[r][cc]==='#' && (r===NR-1 || g[r+1][cc]!=='#');
+        const lit=cc=>{if(r!==NR-1 && !gl.lit.includes(r)) return false; for(let rr=r+1;rr<NR;rr++) if(g[rr][cc]==='#') return false; return true;};
+        let c=0;
+        while(c<w){
+          if(!exposed(c)){c++;continue;}
+          const L=lit(c); let c2=c;
+          while(c2<w && exposed(c2) && lit(c2)===L) c2++;
+          const a=P(U(c),gl.ry[r+1]-0.03,oy), b=P(U(c2),gl.ry[r+1]-0.03,oy);
+          const q=[a,b,[b[0]+sr*d,b[1]+d+0.03],[a[0]+sr*d,a[1]+d+0.03]];
+          Q.all.push(q); if(L) Q.lit.push(q);
+          c=c2;
+        }
+      }
+    }
+  });
+  // 2) cadrage : on mesure, puis on met à l'échelle pour la largeur voulue
+  let mx=Infinity,Mx=-Infinity,my=Infinity,My=-Infinity;
+  for(const q of [...Q.front,...Q.all])for(const [x,y] of q){if(x<mx)mx=x;if(x>Mx)Mx=x;if(y<my)my=y;if(y>My)My=y;}
+  const margin=ol+0.15;
+  const s=opts.width/((Mx-mx)+margin*2);
+  const W=Math.round(opts.width), H=Math.round(((My-my)+margin*2)*s);
+  const tx=x=>(x-mx+margin)*s, ty=y=>(y-my+margin)*s;
+  const toPath=list=>{const p=new Path2D();for(const q of list){p.moveTo(tx(q[0][0]),ty(q[0][1]));for(let i=1;i<4;i++)p.lineTo(tx(q[i][0]),ty(q[i][1]));p.closePath();}return p;};
+  const front=toPath(Q.front), slabLit=toPath(Q.lit), slabAll=toPath(Q.all);
+  const lineBoxes=lineY.map(oy=>({top:ty(oy),bottom:ty(oy+ROWS)}));
+
+  const pad = 2;
+  const Wc=W+pad*2, Hc=H+pad*2;
+  const fill=(path,color)=>{const c=mk(Wc,Hc),x=c.getContext('2d');x.translate(pad,pad);x.fillStyle=color;x.fill(path);return c;};
+
+  const frontMask=fill(front,'#fff');
+  const slabMask=fill(slabLit,'#fff');
+  const silhouette=copyOf(frontMask);
+  silhouette.getContext('2d').drawImage(fill(slabAll,'#fff'),0,0);
+
+  const out=mk(Wc,Hc), ctx=out.getContext('2d');
+  const olPx=Math.round(ol*s);
+  if(olPx>0){
+    ctx.drawImage(tinted(dilate(silhouette,olPx+1),pal.edge),0,0);
+    ctx.drawImage(tinted(dilate(silhouette,olPx),pal.outline),0,0);
+  }
+  ctx.drawImage(tinted(silhouette,pal.outline),0,0);
+
+  const inset=Math.max(0,Math.round(s*0.06)), rw=Math.max(1,Math.round(s*0.1));
+  if(d>0){
+    ctx.drawImage(tinted(slabMask,pal.slab),0,0);
+    ctx.drawImage(tinted(band(slabMask,inset,rw),pal.slabRim),0,0);
+  }
+  // face avant avec dégradé vertical par ligne
+  const face=mk(Wc,Hc), fx=face.getContext('2d');
+  for(const lb of lineBoxes){
+    const gr=fx.createLinearGradient(0,lb.top+pad,0,lb.bottom+pad);
+    gr.addColorStop(0,pal.faceTop);gr.addColorStop(1,pal.faceBottom);
+    fx.fillStyle=gr;fx.fillRect(0,lb.top+pad-s,Wc,(lb.bottom-lb.top)+s*2);
+  }
+  fx.globalCompositeOperation='destination-in';fx.drawImage(frontMask,0,0);
+  ctx.drawImage(face,0,0);
+  ctx.drawImage(tinted(band(frontMask,inset,rw),pal.rim),0,0);
+
+  // recadrage serré sur les pixels visibles
+  const data=ctx.getImageData(0,0,Wc,Hc).data;
+  let x0=Wc,y0=Hc,x1=-1,y1=-1;
+  for(let y=0;y<Hc;y++)for(let x=0;x<Wc;x++){if(data[(y*Wc+x)*4+3]>8){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}}
+  if(x1<0) return null;
+  const fin=mk(x1-x0+1,y1-y0+1);
+  fin.getContext('2d').drawImage(out,-x0,-y0);
+  return fin;
+}
+
+/* ---------- Interface ---------- */
+const $=id=>document.getElementById(id);
+const ui={txt:$('txt'),width:$('width'),depth:$('depth'),tilt:$('tilt'),outline:$('outline'),spacing:$('spacing'),custom:$('custom')};
+let color=DEFAULTS.color, lastCanvas=null, timer=0;
+
+const sw=$('swatches');
+PRESETS.forEach(p=>{
+  const b=document.createElement('button');b.type='button';b.className='sw';b.dataset.c=p.c;
+  b.innerHTML=`<i style="background:${p.c}"></i><span></span>`;b.querySelector('span').textContent=p.name;
+  b.addEventListener('click',()=>{color=p.c;ui.custom.value=p.c;markSwatch();schedule();});
+  sw.appendChild(b);
+});
+function markSwatch(){sw.querySelectorAll('.sw').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.c.toLowerCase()===color.toLowerCase())));}
+ui.custom.addEventListener('input',()=>{color=ui.custom.value;markSwatch();schedule();});
+
+function labels(){
+  $('widthV').textContent=ui.width.value+' px';
+  $('depthV').textContent=(+ui.depth.value).toFixed(1);
+  $('tiltV').textContent=Math.round(ui.tilt.value*100)+' %';
+  $('outlineV').textContent=(+ui.outline.value).toFixed(2);
+  $('spacingV').textContent=(+ui.spacing.value).toFixed(2);
+}
+function draw(){
+  labels();
+  const lines=ui.txt.value.split(/\r?\n/);
+  if(lines.length>3){ui.txt.value=lines.slice(0,3).join('\n');}
+  const c=render({text:ui.txt.value,width:+ui.width.value,depth:+ui.depth.value,tilt:+ui.tilt.value,outline:+ui.outline.value,spacing:+ui.spacing.value,color});
+  lastCanvas=c;
+  const img=$('out');
+  if(!c){img.removeAttribute('src');img.hidden=true;$('dims').textContent='Tape du texte pour voir le logo';return;}
+  img.hidden=false;
+  img.src=c.toDataURL('image/png');
+  img.style.width=Math.min(c.width,  $('view').clientWidth-32)+'px';
+  $('dims').textContent=`${c.width} × ${c.height} px`;
+}
+function schedule(){clearTimeout(timer);timer=setTimeout(draw,60);}
+Object.values(ui).forEach(el=>el.addEventListener('input',schedule));
+window.addEventListener('resize',schedule);
+
+$('reset').addEventListener('click',()=>{
+  for(const k of ['width','depth','tilt','outline','spacing']) ui[k].value=DEFAULTS[k];
+  color=DEFAULTS.color;ui.custom.value=color;markSwatch();draw();
+});
+
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.seg button').forEach(o=>o.setAttribute('aria-pressed',String(o===b)));
+  $('view').className='view bg-'+b.dataset.bg;
+}));
+
+function say(m){$('status').textContent=m;}
+function fileName(){
+  const t=clean(ui.txt.value).replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+  return (t||'titre')+'.png';
+}
+function blob(){return new Promise(r=>lastCanvas.toBlob(r,'image/png'));}
+
+let downloads=null;
+(async()=>{try{downloads=window.claude&&window.claude.use?await window.claude.use('downloads'):null;}catch(e){downloads=null;}})();
+
+$('dl').addEventListener('click',async()=>{
+  if(!lastCanvas){say('Tape du texte d\'abord.');return;}
+  const b=await blob();
+  if(downloads){
+    try{await downloads.save({filename:fileName(),data:b});say('Image enregistrée.');}
+    catch(e){
+      if(e&&e.code==='declined') say('Téléchargement annulé.');
+      else if(e&&e.code==='rate_limited') say('Une fenêtre de téléchargement est déjà ouverte.');
+      else say('Le téléchargement ne marche pas ici : fais clic droit sur l\'aperçu, puis « Enregistrer l\'image ».');
+    }
+    return;
+  }
+  try{
+    const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=fileName();document.body.appendChild(a);a.click();a.remove();
+    say('Si rien ne se passe, fais clic droit sur l\'aperçu, puis « Enregistrer l\'image ».');
+  }catch(e){say('Fais clic droit sur l\'aperçu, puis « Enregistrer l\'image ».');}
+});
+
+$('copy').addEventListener('click',()=>{
+  if(!lastCanvas){say('Tape du texte d\'abord.');return;}
+  try{
+    navigator.clipboard.write([new ClipboardItem({'image/png':blob()})])
+      .then(()=>say('Image copiée, tu peux la coller où tu veux.'))
+      .catch(()=>say('La copie est bloquée ici : fais clic droit sur l\'aperçu, puis « Copier l\'image ».'));
+  }catch(e){say('La copie est bloquée ici : fais clic droit sur l\'aperçu, puis « Copier l\'image ».');}
+});
+
+markSwatch();
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(draw);}
+draw();
+</script>
+
+</body>
+</html>
